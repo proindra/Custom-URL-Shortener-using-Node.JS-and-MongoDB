@@ -7,13 +7,23 @@ async function handleGenerateShortURL(req, res) {
     const shortId = nanoid(8);
     await URL.create({
         shortId: shortId,
-        resdirectURL: body.url,
+        redirectURL: body.url,
         visitHistory: [],
     });
 
     return res.json({Id: shortId});
 }
 
+async function handleGetAnalytics(req, res) {
+    const shortId = req.params.shortId;
+    const result = await URL.findOne({ shortId });
+    return res.json({
+        totalClicks: result.visitHistory.length,
+        analytics: result.visitHistory,
+    });
+}
+
 module.exports = {
     handleGenerateShortURL,
+    handleGetAnalytics,
 };
