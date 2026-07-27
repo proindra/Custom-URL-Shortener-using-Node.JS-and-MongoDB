@@ -1,6 +1,6 @@
 # ✂️ URL Shortener
 
-A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB**, and **EJS**. Generate short IDs for long URLs, track visit history, and view all shortened URLs in a simple web UI.
+A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB**, and **EJS**. Supports user authentication with session-based cookies, short ID generation, visit tracking, and a simple web UI.
 
 ---
 
@@ -11,6 +11,8 @@ A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB*
 - 📊 Track visit history with timestamps for each short URL
 - ⚡ Fast redirects using Express routing
 - 🗄️ Persistent storage with MongoDB via Mongoose
+- 🔐 User signup & login with session-based cookie auth
+- 🛡️ Protected routes via auth middleware
 - 🔄 Auto-restart during development with Nodemon
 
 ---
@@ -25,6 +27,8 @@ A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB*
 | Mongoose | ODM for MongoDB |
 | EJS | Server-side templating |
 | nanoid | Short ID generation |
+| uuid | Session ID generation |
+| cookie-parser | Cookie parsing middleware |
 | Nodemon | Dev auto-restart |
 
 ---
@@ -34,14 +38,23 @@ A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB*
 ```
 url/
 ├── controllers/
-│   └── url.js          # Business logic for URL shortening & analytics
+│   ├── url.js          # Business logic for URL shortening & analytics
+│   └── user.js         # Signup & login handlers
+├── middlewares/
+│   └── auth.js         # Session-based auth middleware
 ├── models/
-│   └── url.js          # Mongoose schema & model
+│   ├── url.js          # Mongoose schema & model for URLs
+│   └── user.js         # Mongoose schema & model for Users
 ├── routes/
-│   ├── url.js          # API route definitions
-│   └── staticRouter.js # Web UI route
+│   ├── url.js          # URL API routes
+│   ├── user.js         # User auth routes
+│   └── staticRouter.js # Web UI routes
+├── services/
+│   └── auth.js         # In-memory session store (setUser/getUser)
 ├── views/
-│   └── home.ejs        # Home page template
+│   ├── home.ejs        # Home page template
+│   ├── login.ejs       # Login page template
+│   └── signup.ejs      # Signup page template
 ├── connect.js          # MongoDB connection helper
 ├── index.js            # App entry point
 └── package.json
@@ -79,13 +92,43 @@ Server starts at **http://localhost:7337**
 
 ## 🌐 Web UI
 
-Visit **http://localhost:7337** in your browser to:
-- Enter a long URL and generate a short ID
-- View a table of all shortened URLs with click counts
+| Route | Description |
+|-------|-------------|
+| `GET /` | Home page — shorten URLs & view all |
+| `GET /signup` | Signup page |
+| `GET /login` | Login page |
 
 ---
 
 ## 📡 API Reference
+
+### Signup
+
+```http
+POST /user
+```
+
+**Request Body**
+```json
+{ "name": "John", "email": "john@example.com", "password": "secret" }
+```
+
+---
+
+### Login
+
+```http
+POST /user/login
+```
+
+**Request Body**
+```json
+{ "email": "john@example.com", "password": "secret" }
+```
+
+Sets a `uid` session cookie on success. Redirects to `/login?error=...` on failure.
+
+---
 
 ### Shorten a URL
 
@@ -95,12 +138,8 @@ POST /url
 
 **Request Body**
 ```json
-{
-  "url": "https://www.example.com/some/very/long/url"
-}
+{ "url": "https://www.example.com/some/very/long/url" }
 ```
-
-Renders the home page with the generated short ID displayed.
 
 ---
 
@@ -110,7 +149,7 @@ Renders the home page with the generated short ID displayed.
 GET /:shortId
 ```
 
-Redirects the browser to the original URL and records a visit timestamp.
+Redirects to the original URL and records a visit timestamp.
 
 **Example**
 ```
@@ -142,21 +181,51 @@ GET /url/analytics/:shortId
 
 ## 🗃️ Database Schema
 
+### URL
 ```js
 {
   shortId:      String,                      // unique short identifier
   redirectURL:  String,                      // original long URL
   visitHistory: [{ timestamp: Number }],     // visit log
-  createdAt:    Date,                        // auto-managed by Mongoose
-  updatedAt:    Date                         // auto-managed by Mongoose
+  createdAt:    Date,
+  updatedAt:    Date
 }
 ```
+
+### User
+```js
+{
+  name:      String,
+  email:     String,   // unique
+  password:  String,
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+---
+
+## 🔐 Auth Flow
+
+1. User signs up at `/signup` → stored in MongoDB
+2. User logs in at `/login` → session ID generated via `uuid`, stored in memory, set as `uid` cookie
+3. Protected routes use `restrictToLoggedinUserOnly` middleware to validate the cookie
 
 ---
 
 ## 📬 Example Usage with cURL
 
 ```bash
+# Signup
+curl -X POST http://localhost:7337/user \
+  -H "Content-Type: application/json" \
+  -d '{"name": "John", "email": "john@example.com", "password": "secret"}'
+
+# Login
+curl -X POST http://localhost:7337/user/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "john@example.com", "password": "secret"}'
+
 # Shorten a URL
 curl -X POST http://localhost:7337/url \
   -H "Content-Type: application/json" \
