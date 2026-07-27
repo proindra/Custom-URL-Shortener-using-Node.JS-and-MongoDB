@@ -219,33 +219,6 @@ GET /url/analytics/:shortId
 
 ---
 
-## 📬 Example Usage with cURL
-
-```bash
-# Signup
-curl -X POST http://localhost:7337/user \
-  -H "Content-Type: application/json" \
-  -d '{"name": "John", "email": "john@example.com", "password": "secret"}'
-
-# Login
-curl -X POST http://localhost:7337/user/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "john@example.com", "password": "secret"}'
-
-# Shorten a URL
-curl -X POST http://localhost:7337/url \
-  -H "Content-Type: application/json" \
-  -d '{"url": "https://www.google.com"}'
-
-# Visit the short URL
-curl -L http://localhost:7337/abc12345
-
-# Get analytics
-curl http://localhost:7337/url/analytics/abc12345
-```
-
----
-
 ## 📄 License
 
 This project is licensed under the **ISC License**.
