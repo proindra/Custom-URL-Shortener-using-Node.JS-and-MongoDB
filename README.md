@@ -13,6 +13,7 @@ A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB*
 - 🗄️ Persistent storage with MongoDB via Mongoose
 - 🔐 User signup & login with session-based cookie auth
 - 🛡️ Protected routes via auth middleware
+- 👤 Each user sees only their own shortened URLs
 - 🔄 Auto-restart during development with Nodemon
 
 ---
@@ -41,7 +42,7 @@ url/
 │   ├── url.js          # Business logic for URL shortening & analytics
 │   └── user.js         # Signup & login handlers
 ├── middlewares/
-│   └── auth.js         # Session-based auth middleware
+│   └── auth.js         # restrictToLoggedinUserOnly & checkAuth middleware
 ├── models/
 │   ├── url.js          # Mongoose schema & model for URLs
 │   └── user.js         # Mongoose schema & model for Users
@@ -94,7 +95,7 @@ Server starts at **http://localhost:7337**
 
 | Route | Description |
 |-------|-------------|
-| `GET /` | Home page — shorten URLs & view all |
+| `GET /` | Home page — shorten URLs & view only your URLs |
 | `GET /signup` | Signup page |
 | `GET /login` | Login page |
 
@@ -135,6 +136,8 @@ Sets a `uid` session cookie on success. Redirects to `/login?error=...` on failu
 ```http
 POST /url
 ```
+
+> Requires login (uses `uid` cookie)
 
 **Request Body**
 ```json
@@ -187,6 +190,7 @@ GET /url/analytics/:shortId
   shortId:      String,                      // unique short identifier
   redirectURL:  String,                      // original long URL
   visitHistory: [{ timestamp: Number }],     // visit log
+  createdBy:    ObjectId,                    // ref to users collection
   createdAt:    Date,
   updatedAt:    Date
 }
@@ -209,7 +213,9 @@ GET /url/analytics/:shortId
 
 1. User signs up at `/signup` → stored in MongoDB
 2. User logs in at `/login` → session ID generated via `uuid`, stored in memory, set as `uid` cookie
-3. Protected routes use `restrictToLoggedinUserOnly` middleware to validate the cookie
+3. `restrictToLoggedinUserOnly` — blocks unauthenticated access, redirects to `/login`
+4. `checkAuth` — optionally sets `req.user` if logged in, but does not block unauthenticated users
+5. Each shortened URL stores `createdBy: req.user._id` so users only see their own URLs
 
 ---
 

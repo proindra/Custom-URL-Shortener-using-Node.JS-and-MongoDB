@@ -6,7 +6,7 @@ const URL = require('./models/url');
 const urlRoutes = require('./routes/url');
 const staticRoute = require('./routes/staticRouter');
 const userRoute = require('./routes/user');
-const {restrictToLoggedinUserOnly} = require('./middlewares/auth');
+const {restrictToLoggedinUserOnly,checkAuth} = require('./middlewares/auth');
 
 const app = express();
 const PORT = 7337;
@@ -24,7 +24,7 @@ app.use(cookieParser());
 
 app.use('/url', restrictToLoggedinUserOnly, urlRoutes);
 app.use('/user', userRoute);
-app.use('/', staticRoute);
+app.use('/', checkAuth, staticRoute);
 
 app.get('/:shortId', async (req, res) => {
     const shortId = req.params.shortId;
