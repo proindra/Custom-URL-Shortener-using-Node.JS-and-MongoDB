@@ -1,3 +1,5 @@
+https://www.jwt.io/
+
 # ✂️ URL Shortener
 
 A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB**, and **EJS**. Supports user authentication with JWT-based cookie auth, short ID generation, visit tracking, and a simple web UI.
@@ -29,7 +31,6 @@ A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB*
 | EJS | Server-side templating |
 | nanoid | Short ID generation |
 | jsonwebtoken | JWT signing & verification |
-| uuid | Utility (installed) |
 | cookie-parser | Cookie parsing middleware |
 | Nodemon | Dev auto-restart |
 
