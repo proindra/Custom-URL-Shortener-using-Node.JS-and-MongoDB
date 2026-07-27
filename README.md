@@ -1,6 +1,6 @@
 # ✂️ URL Shortener
 
-A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB**, and **EJS**. Supports user authentication with session-based cookies, short ID generation, visit tracking, and a simple web UI.
+A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB**, and **EJS**. Supports user authentication with JWT-based cookie auth, short ID generation, visit tracking, and a simple web UI.
 
 ---
 
@@ -11,7 +11,7 @@ A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB*
 - 📊 Track visit history with timestamps for each short URL
 - ⚡ Fast redirects using Express routing
 - 🗄️ Persistent storage with MongoDB via Mongoose
-- 🔐 User signup & login with session-based cookie auth
+- 🔐 User signup & login with JWT cookie auth
 - 🛡️ Protected routes via auth middleware
 - 👤 Each user sees only their own shortened URLs
 - 🔄 Auto-restart during development with Nodemon
@@ -28,7 +28,8 @@ A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB*
 | Mongoose | ODM for MongoDB |
 | EJS | Server-side templating |
 | nanoid | Short ID generation |
-| uuid | Session ID generation |
+| jsonwebtoken | JWT signing & verification |
+| uuid | Utility (installed) |
 | cookie-parser | Cookie parsing middleware |
 | Nodemon | Dev auto-restart |
 
@@ -51,7 +52,7 @@ url/
 │   ├── user.js         # User auth routes
 │   └── staticRouter.js # Web UI routes
 ├── services/
-│   └── auth.js         # In-memory session store (setUser/getUser)
+│   └── auth.js         # JWT setUser/getUser helpers
 ├── views/
 │   ├── home.ejs        # Home page template
 │   ├── login.ejs       # Login page template
@@ -127,7 +128,7 @@ POST /user/login
 { "email": "john@example.com", "password": "secret" }
 ```
 
-Sets a `uid` session cookie on success. Redirects to `/login?error=...` on failure.
+Signs a JWT containing `_id` and `email`, sets it as a `uid` cookie. Redirects to `/login?error=...` on failure.
 
 ---
 
@@ -212,9 +213,9 @@ GET /url/analytics/:shortId
 ## 🔐 Auth Flow
 
 1. User signs up at `/signup` → stored in MongoDB
-2. User logs in at `/login` → session ID generated via `uuid`, stored in memory, set as `uid` cookie
-3. `restrictToLoggedinUserOnly` — blocks unauthenticated access, redirects to `/login`
-4. `checkAuth` — optionally sets `req.user` if logged in, but does not block unauthenticated users
+2. User logs in at `/login` → JWT signed with `{ _id, email }` payload, set as `uid` cookie
+3. `restrictToLoggedinUserOnly` — verifies JWT from `uid` cookie, blocks unauthenticated access, redirects to `/login`
+4. `checkAuth` — verifies JWT and sets `req.user` if valid, does not block unauthenticated users
 5. Each shortened URL stores `createdBy: req.user._id` so users only see their own URLs
 
 ---
