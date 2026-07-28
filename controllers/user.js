@@ -8,6 +8,7 @@ async function handleUserSignUp(req, res){
         name,
         email,
         password,
+        role: "NORMAL",
     });
     return res.redirect("/");
 }
