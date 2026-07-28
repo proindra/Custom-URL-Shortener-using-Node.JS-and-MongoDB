@@ -1,8 +1,6 @@
-https://www.jwt.io/
-
 # ✂️ URL Shortener
 
-A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB**, and **EJS**. Supports user authentication with JWT-based cookie auth, short ID generation, visit tracking, and a simple web UI.
+A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB**, and **EJS**. Supports user authentication with JWT-based cookie auth, short ID generation, visit tracking, role-based access control, and a simple web UI.
 
 ---
 
@@ -13,9 +11,10 @@ A fast and minimal URL shortener built with **Node.js**, **Express**, **MongoDB*
 - 📊 Track visit history with timestamps for each short URL
 - ⚡ Fast redirects using Express routing
 - 🗄️ Persistent storage with MongoDB via Mongoose
-- 🔐 User signup & login with JWT cookie auth
+- 🔐 User signup & login with JWT cookie auth (`authorization` cookie)
 - 🛡️ Protected routes via auth middleware
 - 👤 Each user sees only their own shortened URLs
+- 🔑 Role-based access control (`NORMAL`, `ADMIN`)
 - 🔄 Auto-restart during development with Nodemon
 
 ---
@@ -44,14 +43,14 @@ url/
 │   ├── url.js          # Business logic for URL shortening & analytics
 │   └── user.js         # Signup & login handlers
 ├── middlewares/
-│   └── auth.js         # restrictToLoggedinUserOnly & checkAuth middleware
+│   └── auth.js         # checkForAuthentication & restrictTo middleware
 ├── models/
 │   ├── url.js          # Mongoose schema & model for URLs
 │   └── user.js         # Mongoose schema & model for Users
 ├── routes/
 │   ├── url.js          # URL API routes
 │   ├── user.js         # User auth routes
-│   └── staticRouter.js # Web UI routes
+│   └── staticRouter.js # Web UI routes (home, login, signup, admin)
 ├── services/
 │   └── auth.js         # JWT setUser/getUser helpers
 ├── views/
@@ -95,11 +94,12 @@ Server starts at **http://localhost:7337**
 
 ## 🌐 Web UI
 
-| Route | Description |
-|-------|-------------|
-| `GET /` | Home page — shorten URLs & view only your URLs |
-| `GET /signup` | Signup page |
-| `GET /login` | Login page |
+| Route | Description | Access |
+|-------|-------------|--------|
+| `GET /` | Home page — shorten URLs & view your URLs | Logged in users |
+| `GET /admin/urls` | View all shortened URLs | ADMIN role only |
+| `GET /signup` | Signup page | Public |
+| `GET /login` | Login page | Public |
 
 ---
 
@@ -108,7 +108,7 @@ Server starts at **http://localhost:7337**
 ### Signup
 
 ```http
-POST /user
+POST /user/signup
 ```
 
 **Request Body**
@@ -129,7 +129,7 @@ POST /user/login
 { "email": "john@example.com", "password": "secret" }
 ```
 
-Signs a JWT containing `_id` and `email`, sets it as a `uid` cookie. Redirects to `/login?error=...` on failure.
+Signs a JWT containing `_id`, `email`, and `role`, sets it as an `authorization` cookie. Redirects to `/login?error=...` on failure.
 
 ---
 
@@ -139,7 +139,7 @@ Signs a JWT containing `_id` and `email`, sets it as a `uid` cookie. Redirects t
 POST /url
 ```
 
-> Requires login (uses `uid` cookie)
+> Requires login (uses `authorization` cookie)
 
 **Request Body**
 ```json
@@ -204,6 +204,7 @@ GET /url/analytics/:shortId
   name:      String,
   email:     String,   // unique
   password:  String,
+  role:      String,   // 'NORMAL' | 'ADMIN'
   createdAt: Date,
   updatedAt: Date
 }
@@ -214,10 +215,11 @@ GET /url/analytics/:shortId
 ## 🔐 Auth Flow
 
 1. User signs up at `/signup` → stored in MongoDB
-2. User logs in at `/login` → JWT signed with `{ _id, email }` payload, set as `uid` cookie
-3. `restrictToLoggedinUserOnly` — verifies JWT from `uid` cookie, blocks unauthenticated access, redirects to `/login`
-4. `checkAuth` — verifies JWT and sets `req.user` if valid, does not block unauthenticated users
+2. User logs in at `/login` → JWT signed with `{ _id, email, role }` payload, set as `authorization` cookie
+3. `checkForAuthentication` — reads `authorization` cookie on every request, verifies JWT, and sets `req.user` if valid
+4. `restrictTo(roles)` — redirects to `/login` if not logged in; if a non-empty roles array is provided, also checks `req.user.role`
 5. Each shortened URL stores `createdBy: req.user._id` so users only see their own URLs
+6. Admin users can view all URLs at `/admin/urls`
 
 ---
 
